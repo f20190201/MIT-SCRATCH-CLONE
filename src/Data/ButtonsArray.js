@@ -17,5 +17,11 @@ export const buttonsArray = [
       id: "rotateAnticlock",
       value: 0
     },
+    {
+      leftText: "Repeat",
+      rightText: "times",
+      id: "repeat",
+      value: 0
+    },
     { id: "goto", value: {x: 0, y: 0} },
   ];

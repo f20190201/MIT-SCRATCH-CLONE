@@ -1,9 +1,11 @@
 import "./App.css";
 import Control from "./components/Control";
 import { DragDropContext } from "react-beautiful-dnd";
-import { useRef, useState } from "react";
-import { calculateXYPos, initialCommandRefObj, handleCalculateNewPos, pause, distanceBetweenTwoPoints, getCenter } from "./Data/Helper";
+import { useEffect, useRef, useState } from "react";
+import { calculateXYPos, initialCommandRefObj, handleCalculateNewPos, pause, distanceBetweenTwoPoints, getCenter, toastProperties, handleRepeat, simplifyDropArray, getPostCollisionMovementArray, animatePostCollision } from "./Data/Helper";
 import SpriteStats from "./components/SpriteStats";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   
@@ -21,6 +23,23 @@ function App() {
   const sprite1Ref = useRef(null), sprite2Ref = useRef(null);
   const collisionRef = useRef(false);
   const positionRef = useRef({ sprite1: {x: 0, y: 0, angle: 0}, sprite2: {x: 0, y: 0, angle: 0}});
+
+  const showToast = (toastMessage = "Sorry, something's wrong", type = "") => {
+      switch (type) {
+        case "error":
+          toast.error(toastMessage, toastProperties);
+          break;
+        case "info":
+          toast.info(toastMessage, toastProperties);
+          break;
+        case "success":
+          toast.success(toastMessage, toastProperties);
+          break;
+        default:
+          toast(toastMessage, toastProperties);
+          break;
+      }
+  }
 
   const handleDragEnd = (result) => {
     const { source, destination } = result;
@@ -60,10 +79,31 @@ function App() {
           id: "rotateAnticlock",
           value: 0
         },
+        {
+          leftText: "Repeat",
+          rightText: "times",
+          id: "repeat",
+          value: 0
+        },
         { id: "goto", value: {x: 0, y: 0} },
       ][sourceIndex];
       const currentDisplayArray = [...dropArray[selectedSprite]];
-      currentDisplayArray.splice(destinationIndex, 0, movedItem);
+      if(movedItem.id === 'repeat') {
+        currentDisplayArray.splice(destinationIndex, 0, {
+          leftText: "Repeat",
+          rightText: "times",
+          id: "repeat",
+          value: 0
+        }, {
+          leftText: "DONE",
+          rightText: "",
+          id: "repeatEnd",
+          value: 0
+      });  
+      } else {
+        currentDisplayArray.splice(destinationIndex, 0, movedItem);
+      }
+      
       setDropArray((prevDropArray) => ({...prevDropArray, [selectedSprite]: currentDisplayArray}))
   
     } else if (sourceId === "dropArea" && destinationId === "motionArea") {
@@ -76,25 +116,37 @@ function App() {
     }
   };
 
-  const handleAfterCollisionMovement = (prevPos, currPos) => {
+  const handleAfterCollisionMovement = async (prevPos, currPos, sprite1Index, sprite2Index, sanitizedArray) => {
 
-    const {sprite1: {x: x1Initial, y: y1Initial, angle: angle1}, sprite2: {x: x2Initial, y: y2Initial, angle: angle2}} = prevPos;
-    const {sprite1: {x: x1final, y: y1final, angle: angle1final}, sprite2: {x: x2final, y: y2final, angle: angle2final}} = currPos;
+    return new Promise(async (resolve, reject) => {
+      const postCollisionArray1 = getPostCollisionMovementArray(sanitizedArray.sprite1, sprite1Index), postCollisionArray2 = getPostCollisionMovementArray(sanitizedArray.sprite2, sprite2Index);
+  
+      // await pause(150);
+      // const {sprite1: {x: x1Initial, y: y1Initial, angle: angle1}, sprite2: {x: x2Initial, y: y2Initial, angle: angle2}} = prevPos;
+      // const {sprite1: {x: x1final, y: y1final, angle: angle1final}, sprite2: {x: x2final, y: y2final, angle: angle2final}} = currPos;
+  
+      // const distByS1 = distanceBetweenTwoPoints(x1Initial, x1final, y1Initial, y1final);
+      // const distByS2 = distanceBetweenTwoPoints(x2Initial, x2final, y2Initial, y2final);
+  
+      // const {x: newX1, y: newY1} = calculateXYPos(x1final, y1final, -distByS2, angle1final, canvasRef);
+      // const {x: newX2, y: newY2} = calculateXYPos(x2final, y2final, -distByS1, angle2final, canvasRef);
+  
+      // positionRef.current = {sprite1: {x: newX1, y: newY1, angle: angle1final}, sprite2: {x: newX2, y: newY2, angle: angle2final}};
+      // setPosition({sprite1: {x: newX1, y: newY1 - 10, angle: angle1final}, sprite2: {x: newX2, y: newY2 - 10, angle: angle2final}});
+  
+      // handleAnimateAll({sprite1: postCollisionArray1, sprite2: postCollisionArray2}, false);
 
-    const distByS1 = distanceBetweenTwoPoints(x1Initial, x1final, y1Initial, y1final);
-    const distByS2 = distanceBetweenTwoPoints(x2Initial, x2final, y2Initial, y2final);
+      await animatePostCollision({sprite1: postCollisionArray2, sprite2: postCollisionArray1}, currPos, canvasRef, setPosition);
 
-    const {x: newX1, y: newY1} = calculateXYPos(x1final, y1final, -distByS2, angle1final, canvasRef);
-    const {x: newX2, y: newY2} = calculateXYPos(x2final, y2final, -distByS1, angle2final, canvasRef);
+      resolve();
+    })
 
-    positionRef.current = {sprite1: {x: newX1, y: newY1, angle: angle1final}, sprite2: {x: newX2, y: newY2, angle: angle2final}};
-    setPosition({sprite1: {x: newX1, y: newY1, angle: angle1final}, sprite2: {x: newX2, y: newY2, angle: angle2final}});
-    // resumeAnimation(sprite1Ref, sprite2Ref);
+    
   }
 
-  const trackPositionDuringAnimation = (prevPosition) => {
+  const trackPositionDuringAnimation = (prevPosition, sprite1Index, sprite2Index, sanitizedArray, isCollisionCheck) => {
     
-    const intervalId = setInterval(() => {
+    const intervalId = setInterval(async () => {
       if (sprite1Ref.current) {
         const rect1 = sprite1Ref.current.getBoundingClientRect();
         const rect2 = sprite2Ref.current.getBoundingClientRect();
@@ -102,30 +154,35 @@ function App() {
         const {x: centerX2, y: centerY2} = getCenter(sprite2Ref);
         const dist = distanceBetweenTwoPoints(centerX1, centerX2, centerY1, centerY2);
 
-        if(dist < 80) {
+        if(isCollisionCheck && (dist < 80)) {
+        showToast("Collision!", "success");
         const {left, bottom} = canvasRef.current.getBoundingClientRect();
         
-        const collisionPosition = { sprite1: {...position.sprite1, x: Math.abs(rect1.left - left - 20) , y: Math.abs(rect1.bottom - bottom - 20)}, sprite2: {...position.sprite2, x: Math.abs(rect2.left - left - 20) , y: Math.abs(rect2.bottom - bottom - 20)}}
+        const collisionPosition = { sprite1: {...position.sprite1, x: Math.abs(rect1.left - left) , y: Math.abs(rect1.bottom - bottom)}, sprite2: {...position.sprite2, x: Math.abs(rect2.left - left) , y: Math.abs(rect2.bottom - bottom)}}
         setPosition({...collisionPosition});
         positionRef.current = {...collisionPosition};
         
         collisionRef.current = true;
-        handleAfterCollisionMovement(prevPosition, collisionPosition);
         clearInterval(intervalId);
+        await handleAfterCollisionMovement(prevPosition, collisionPosition, sprite1Index, sprite2Index, sanitizedArray);
         }
       }
-    }, 1);  // Log position every 30ms
+    }, 1);
 
-    // Stop logging when animation ends
       setTimeout(() => {
         clearInterval(intervalId);
       }, 300)
   };
 
   const handleButtonCallback = (id, inputValue, goToCoordinates) => {
-
-    return new Promise((resolve) => {
+    return new Promise(async (resolve) => {
+      const {height, width} = canvasRef.current.getBoundingClientRect();
       switch (id) {
+        case "repeat": {
+          await handleRepeat(inputValue, dropArray, selectedSprite, handleButtonCallback);
+          resolve();
+          break;
+        }
         case "moveY":
         case "moveX": {
           const { x, y } = calculateXYPos(
@@ -162,8 +219,8 @@ function App() {
         case "goto": {
           setPosition((prevState) => {
             const selectedSpritePos = prevState[selectedSprite];
-            positionRef.current = {...prevState, [selectedSprite]: {...selectedSpritePos, x: Number(goToCoordinates.x), y: Number(goToCoordinates.y)}};
-            return {...prevState, [selectedSprite]: {...selectedSpritePos, x: Number(goToCoordinates.x), y: Number(goToCoordinates.y)}};
+            positionRef.current = {...prevState, [selectedSprite]: {...selectedSpritePos, x: Math.min(Math.max(goToCoordinates.x, 0), Number(width) - 100), y: Math.min(Math.max(goToCoordinates.y, 0), Number(height) - 100)}};
+            return {...prevState, [selectedSprite]: {...selectedSpritePos, x: Math.min(Math.max(goToCoordinates.x, 0), Number(width) - 100), y: Math.min(Math.max(goToCoordinates.y, 0), Number(height) - 100)}};
           });
           break;
         }
@@ -184,17 +241,8 @@ function App() {
 
     for(let i = 0 ; i < displayArray.length; i++) {
       const id = displayArray[i]["id"];
-      switch (id) {
-        case "goto": {
-          await handleButtonCallback(id, 0, displayArray[i].value);
-          break;
-        }
-        default: {
-          await handleButtonCallback(id, displayArray[i].value, {});
-          break;
-        }
-      }
-      await pause(300);
+      await handleButtonCallback(id, displayArray[i].value, displayArray[i].value);
+      await pause(100);
     }
 
     setIsPlayAllClicked(false);
@@ -233,10 +281,12 @@ function App() {
     });
   };
 
-  const handleAnimateAll = async () => {
+  const handleAnimateAll = async (data, isCollisionCheck = false) => {
     collisionRef.current = false;
-    const noOfSprite1 = dropArray.sprite1.length, noOfSprite2 = dropArray.sprite2.length;
-    const sprite1Array = dropArray.sprite1, sprite2Array = dropArray.sprite2;
+
+    const getSanitizedArray = simplifyDropArray(data)
+    const sprite1Array = getSanitizedArray.sprite1, sprite2Array = getSanitizedArray.sprite2;
+    const noOfSprite1 = sprite1Array.length, noOfSprite2 = sprite2Array.length;
     let positionCopy = {...position};
 
     for(let i = 0 ; i < Math.max(noOfSprite1, noOfSprite2) ; i++) {
@@ -254,8 +304,10 @@ function App() {
         let commandObj = [...sprite2Array][i];
         positionCopy = {...positionCopy, sprite2: await handleCalculateNewPos(commandObj.id, commandObj.value, positionCopy.sprite2, canvasRef)};
       }
-      
-      trackPositionDuringAnimation({...position});
+
+      if(isCollisionCheck === true) {
+        trackPositionDuringAnimation({...position}, Math.min(i, noOfSprite1), Math.min(i, noOfSprite2), getSanitizedArray, isCollisionCheck);
+      }
       if(collisionRef.current)
         break;
       else setPosition({...positionCopy});
@@ -265,10 +317,20 @@ function App() {
 
   }
 
+  useEffect(() => {
+    if(noOfSprites === 1) {
+      setSelectedSprite("sprite1");
+      setDropArray((prevState) => ({...prevState, sprite2: []}));
+      setPosition({...position, sprite2: {x: 0, y: 0, angle: 0}});
+      positionRef.current = {...positionRef.current, sprite2: {x: 0, y: 0, angle: 0}};
+    }
+  }, [noOfSprites])
+
   return (
     <div className="App">
       <div className="bg-gray-300">
         <div className="flex gap-2">
+        <ToastContainer />
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="w-2/3 bg-white flex h-[98vh] m-4 rounded-md drop-shadow-xl">
               <div className="w-[40%] border-r-2">
@@ -290,6 +352,12 @@ function App() {
                       leftText: "Turn Anticlockwise",
                       rightText: "Degrees",
                       id: "rotateAnticlock",
+                      value: 0
+                    },
+                    {
+                      leftText: "Repeat",
+                      rightText: "times",
+                      id: "repeat",
                       value: 0
                     },
                     { id: "goto", value: {x: 0, y: 0} },
@@ -332,13 +400,13 @@ function App() {
               <img
                 ref={sprite1Ref}
                 id="sprite1"
-                src="/catSprite2.png"
+                src="/catSprite2copy.png"
                 alt="cat sprite"
                 draggable="true"
                 onDragStart={handleDragStart}
                 style={{
                   height: "100px",
-                  width: "140px",
+                  width: "100px",
                   position: "absolute",
                   bottom: position.sprite1.y,
                   left: position.sprite1.x,
@@ -352,13 +420,13 @@ function App() {
                 <img
                   ref={sprite2Ref}
                   id="sprite2"
-                  src="/dogSprite2.png"
+                  src="/dogSprite2copy.png"
                   alt="dog sprite"
                   draggable="true"
                   onDragStart={handleDragStart}
                   style={{
                     height: "100px",
-                    width: "140px",
+                    width: "90px",
                     position: "absolute",
                     bottom: position.sprite2.y,
                     left: position.sprite2.x,
@@ -370,12 +438,15 @@ function App() {
               )}
             </div>
             <SpriteStats
+              dropArray={dropArray}
               currentCommandIndex={currentCommandIndex}
               setNoOfSprites={setNoOfSprites}
               selectedSprite={selectedSprite}
               setSelectedSprite={setSelectedSprite}
               noOfSprites={noOfSprites}
               handleAnimateAll={handleAnimateAll}
+              setDropArray={setDropArray}
+              showToast={showToast}
             />
           </div>
         </div>

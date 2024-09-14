@@ -32,7 +32,7 @@ const Button = ({
       {id !== "goto" ? (
         <>
           <span>{leftText}</span>
-          <input
+          {id !== 'repeatEnd' && <input
             type="text"
             value={isSource ? "" : dropArray[selectedSprite][index].value}
             onClick={(e) => e.stopPropagation()}
@@ -40,7 +40,7 @@ const Button = ({
               if(!isSource) {
                 let val = Number(e.target.value)
               setInputValue(val);
-              commandValueRef.current[id].value = val;
+              // commandValueRef.current[id].value = val;
               let currentDisplayArray = [...dropArray[selectedSprite]];
               currentDisplayArray[index].value = val;
               setDropArray((prevState) => {
@@ -50,7 +50,7 @@ const Button = ({
               }
             }}
             className="bg-white text-black mx-2 rounded-md w-24 z-10 pl-2"
-          ></input>
+          ></input>}
           <span>{rightText}</span>
         </>
       ) : (
