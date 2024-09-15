@@ -414,8 +414,8 @@ function App() {
                   height: "100px",
                   width: "100px",
                   position: "absolute",
-                  bottom: position.sprite1.y,
-                  left: position.sprite1.x,
+                  bottom: position.sprite1.y || 0,
+                  left: position.sprite1.x || 0,
                   transform: `rotate(${position.sprite1.angle}deg)`, // Apply rotation here
                   transition:
                     "transform 0.3s ease-in-out, bottom 0.3s ease-in-out, left 0.3s ease-in-out", // Smooth transition
@@ -434,8 +434,8 @@ function App() {
                     height: "100px",
                     width: "90px",
                     position: "absolute",
-                    bottom: position.sprite2.y,
-                    left: position.sprite2.x,
+                    bottom: position.sprite2.y || 0,
+                    left: position.sprite2.x || 0,
                     transform: `rotate(${position.sprite2.angle}deg)`, // Apply rotation here
                     transition:
                       "transform 0.3s ease-in-out, bottom 0.3s ease-in-out, left 0.3s ease-in-out", // Smooth transition
@@ -444,6 +444,9 @@ function App() {
               )}
             </div>
             <SpriteStats
+              canvasRef={canvasRef}
+              setPosition={setPosition}
+              position={position}
               dropArray={dropArray}
               currentCommandIndex={currentCommandIndex}
               setNoOfSprites={setNoOfSprites}
@@ -454,6 +457,7 @@ function App() {
               setDropArray={setDropArray}
               showToast={showToast}
             />
+            
           </div>
         </div>
       </div>

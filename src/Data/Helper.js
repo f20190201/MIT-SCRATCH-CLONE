@@ -39,6 +39,20 @@ export const calculateXYPos = (currX, currY, steps = 0, degrees, canvasRef) => {
     return {x: Math.min(Math.max(xPos, 0), Number(width) - 100), y: Math.min(Math.max(yPos, 0), Number(height) - 100)};
 }
 
+export const getXBoundsForGoto = (x, canvasRef) => {
+
+  const { width } = canvasRef.current.getBoundingClientRect();
+
+  return Math.min(Math.max(Number(x), 0), Number(width) - 100);
+}
+
+export const getYBoundsForGoto = (y, canvasRef) => {
+
+  const { height } = canvasRef.current.getBoundingClientRect();
+
+  return Math.min(Math.max(Number(y), 0), Number(height) - 100);
+}
+
 export const handleCalculateNewPos = (id, commandValue, currPos, canvasRef) => {
 
     const {height, width} = canvasRef.current.getBoundingClientRect();
