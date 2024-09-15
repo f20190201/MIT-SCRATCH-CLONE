@@ -11,7 +11,7 @@ const Control = ({dropArray, setDropArray, buttonsArray = [], droppableIdName, h
       {(provided) => (
         <div ref={provided.innerRef} {...provided.droppableProps} className="flex flex-col gap-4 ml-2 mt-2 min-h-[90vh]">
           {buttonsArrayCopy.map((button, index) => (
-            <Draggable key={button.id+"_"+droppableIdName} draggableId={button.id+"_"+droppableIdName} index={index}>
+            <Draggable key={button.id+"_"+droppableIdName+index} draggableId={button.id+"_"+droppableIdName+index} index={index}>
               {(provided) => (
                 <Button
                   isSource={isSource}

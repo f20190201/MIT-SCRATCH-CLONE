@@ -20,6 +20,8 @@ const Button = ({
     y: 0,
   });
 
+  
+
   return (
     <div
       ref={provided.innerRef}
@@ -27,7 +29,7 @@ const Button = ({
       {...provided.dragHandleProps}
       onClick={() => onClickCallback(id, inputValue, goToCoordinates)}
       type="button"
-      class="flex w-fit drop-shadow-lg text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-300 font-medium rounded-full text-sm px-5 py-2.5 text-center dark:focus:ring-blue-800"
+      class={`flex w-fit drop-shadow-lg text-white  ${(id === 'repeat' || id === 'repeatEnd') ? 'bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-300' : 'bg-blue-500 hover:bg-blue-600 focus:ring-blue-300'} focus:outline-none focus:ring-4 font-medium rounded-full text-sm px-5 py-2.5 text-center dark:focus:ring-blue-800`}
     >
       {id !== "goto" ? (
         <>

@@ -35,6 +35,9 @@ function App() {
         case "success":
           toast.success(toastMessage, toastProperties);
           break;
+        case "warning":
+          toast.warn(toastMessage, toastProperties);
+          break;
         default:
           toast(toastMessage, toastProperties);
           break;
@@ -43,10 +46,12 @@ function App() {
 
   const handleDragEnd = (result) => {
     const { source, destination } = result;
+    if (!destination || !source) {
+      showToast("Please drag/drop in the required area", "warning")
+      return;
+    }
     const { droppableId: sourceId, index: sourceIndex } = source;
     const { droppableId: destinationId, index: destinationIndex } = destination;
-
-    if (!destination) return;
    
     if (sourceId === destinationId) {
       if(sourceId === 'motionArea')
@@ -89,6 +94,12 @@ function App() {
       ][sourceIndex];
       const currentDisplayArray = [...dropArray[selectedSprite]];
       if(movedItem.id === 'repeat') {
+
+        if(currentDisplayArray.findIndex((element) => element.id === 'repeat') !== -1) {
+          showToast("Nested Loops coming soon!", "info");
+          return;
+        }
+
         currentDisplayArray.splice(destinationIndex, 0, {
           leftText: "Repeat",
           rightText: "times",
@@ -108,33 +119,19 @@ function App() {
   
     } else if (sourceId === "dropArea" && destinationId === "motionArea") {
       setDropArray((prevState) => {
-        let displayArray = prevState[selectedSprite];
+        let displayArray = {...prevState}[selectedSprite];
         displayArray.splice(sourceIndex, 1);
 
         return {...prevState, [selectedSprite]: displayArray};
       })
     }
+    
   };
 
   const handleAfterCollisionMovement = async (prevPos, currPos, sprite1Index, sprite2Index, sanitizedArray) => {
 
     return new Promise(async (resolve, reject) => {
       const postCollisionArray1 = getPostCollisionMovementArray(sanitizedArray.sprite1, sprite1Index), postCollisionArray2 = getPostCollisionMovementArray(sanitizedArray.sprite2, sprite2Index);
-  
-      // await pause(150);
-      // const {sprite1: {x: x1Initial, y: y1Initial, angle: angle1}, sprite2: {x: x2Initial, y: y2Initial, angle: angle2}} = prevPos;
-      // const {sprite1: {x: x1final, y: y1final, angle: angle1final}, sprite2: {x: x2final, y: y2final, angle: angle2final}} = currPos;
-  
-      // const distByS1 = distanceBetweenTwoPoints(x1Initial, x1final, y1Initial, y1final);
-      // const distByS2 = distanceBetweenTwoPoints(x2Initial, x2final, y2Initial, y2final);
-  
-      // const {x: newX1, y: newY1} = calculateXYPos(x1final, y1final, -distByS2, angle1final, canvasRef);
-      // const {x: newX2, y: newY2} = calculateXYPos(x2final, y2final, -distByS1, angle2final, canvasRef);
-  
-      // positionRef.current = {sprite1: {x: newX1, y: newY1, angle: angle1final}, sprite2: {x: newX2, y: newY2, angle: angle2final}};
-      // setPosition({sprite1: {x: newX1, y: newY1 - 10, angle: angle1final}, sprite2: {x: newX2, y: newY2 - 10, angle: angle2final}});
-  
-      // handleAnimateAll({sprite1: postCollisionArray1, sprite2: postCollisionArray2}, false);
 
       await animatePostCollision({sprite1: postCollisionArray2, sprite2: postCollisionArray1}, currPos, canvasRef, setPosition);
 
@@ -283,6 +280,11 @@ function App() {
 
   const handleAnimateAll = async (data, isCollisionCheck = false) => {
     collisionRef.current = false;
+
+    if(noOfSprites === 1) {
+      showToast("Please add both sprites to activate this feature", "warning");
+      return;
+    }
 
     const getSanitizedArray = simplifyDropArray(data)
     const sprite1Array = getSanitizedArray.sprite1, sprite2Array = getSanitizedArray.sprite2;
