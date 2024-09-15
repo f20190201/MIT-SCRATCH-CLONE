@@ -2,7 +2,7 @@ import "./App.css";
 import Control from "./components/Control";
 import { DragDropContext } from "react-beautiful-dnd";
 import { useEffect, useRef, useState } from "react";
-import { calculateXYPos, initialCommandRefObj, handleCalculateNewPos, pause, distanceBetweenTwoPoints, getCenter, toastProperties, handleRepeat, simplifyDropArray, getPostCollisionMovementArray, animatePostCollision } from "./Data/Helper";
+import { calculateXYPos, initialCommandRefObj, handleCalculateNewPos, pause, distanceBetweenTwoPoints, getCenter, toastProperties, handleRepeat, simplifyDropArray, getPostCollisionMovementArray, animatePostCollision, sanitizedArray } from "./Data/Helper";
 import SpriteStats from "./components/SpriteStats";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -23,6 +23,7 @@ function App() {
   const sprite1Ref = useRef(null), sprite2Ref = useRef(null);
   const collisionRef = useRef(false);
   const positionRef = useRef({ sprite1: {x: 0, y: 0, angle: 0}, sprite2: {x: 0, y: 0, angle: 0}});
+  const [isDragging, setIsDragging] = useState(false);
 
   const showToast = (toastMessage = "Sorry, something's wrong", type = "") => {
       switch (type) {
@@ -45,6 +46,7 @@ function App() {
   }
 
   const handleDragEnd = (result) => {
+    setIsDragging(false);
     const { source, destination } = result;
     if (!destination || !source) {
       showToast("Please drag/drop in the required area", "warning")
@@ -232,14 +234,15 @@ function App() {
   };
   const handlePlayAll = async() => {
     
-    const displayArray = dropArray[selectedSprite]
-    if (displayArray.length === 0) return;
+    const displayArray = dropArray[selectedSprite];
+    const sanitizedArray_ = sanitizedArray([...displayArray]);
+    if (sanitizedArray_.length === 0) return;
     setIsPlayAllClicked(true);
 
-    for(let i = 0 ; i < displayArray.length; i++) {
-      const id = displayArray[i]["id"];
-      await handleButtonCallback(id, displayArray[i].value, displayArray[i].value);
-      await pause(100);
+    for(let i = 0 ; i < sanitizedArray_.length; i++) {
+      const id = sanitizedArray_[i]["id"];
+      await handleButtonCallback(id, sanitizedArray_[i].value, sanitizedArray_[i].value);
+      await pause(300);
     }
 
     setIsPlayAllClicked(false);
@@ -333,7 +336,7 @@ function App() {
       <div className="bg-gray-300">
         <div className="flex gap-2">
         <ToastContainer />
-          <DragDropContext onDragEnd={handleDragEnd}>
+          <DragDropContext onDragEnd={handleDragEnd} onDragStart={() => { setIsDragging(true) }}>
             <div className="w-2/3 bg-white flex h-[98vh] m-4 rounded-md drop-shadow-xl">
               <div className="w-[40%] border-r-2">
                 <Control
@@ -377,6 +380,7 @@ function App() {
                   PLAY ALL
                 </div>
                 <Control
+                  isDragging={isDragging}
                   buttonsArray={[...dropArray[selectedSprite]]}
                   dropArray={dropArray}
                   setDropArray={setDropArray}
